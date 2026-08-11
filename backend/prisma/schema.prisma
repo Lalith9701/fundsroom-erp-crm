@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  SALES
+  WAREHOUSE
+  ACCOUNTS
+}
+
+enum CustomerType {
+  RETAIL
+  WHOLESALE
+  DISTRIBUTOR
+}
+
+enum CustomerStatus {
+  LEAD
+  ACTIVE
+  INACTIVE
+}
+
+enum MovementType {
+  IN
+  OUT
+}
+
+enum ChallanStatus {
+  DRAFT
+  CONFIRMED
+  CANCELLED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(SALES)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  followups      FollowUp[]
+  stockMovements StockMovement[]
+  challans       Challan[]
+
+  @@map("users")
+}
+
+model Customer {
+  id           String         @id @default(uuid())
+  name         String
+  mobile       String
+  email        String
+  businessName String         @map("business_name")
+  gstNumber    String?        @map("gst_number")
+  customerType CustomerType   @default(RETAIL) @map("customer_type")
+  address      String
+  status       CustomerStatus @default(LEAD)
+  followUpDate DateTime?      @map("follow_up_date")
+  notes        String?
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+
+  followups FollowUp[]
+  challans  Challan[]
+
+  @@map("customers")
+}
+
+model FollowUp {
+  id           String   @id @default(uuid())
+  customerId   String   @map("customer_id")
+  notes        String
+  followUpDate DateTime @map("follow_up_date")
+  createdById  String   @map("created_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  customer  Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdBy User     @relation(fields: [createdById], references: [id])
+
+  @@map("follow_ups")
+}
+
+model Product {
+  id                String   @id @default(uuid())
+  name              String
+  sku               String   @unique
+  category          String
+  unitPrice         Float    @map("unit_price")
+  currentStock      Int      @default(0) @map("current_stock")
+  minStockAlert     Int      @default(5) @map("min_stock_alert")
+  warehouseLocation String   @map("warehouse_location")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  stockMovements StockMovement[]
+  challanItems   ChallanItem[]
+
+  @@map("products")
+}
+
+model StockMovement {
+  id           String       @id @default(uuid())
+  productId    String       @map("product_id")
+  quantity     Int
+  movementType MovementType @map("movement_type")
+  reason       String
+  createdById  String       @map("created_by_id")
+  createdAt    DateTime     @default(now()) @map("created_at")
+
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdBy User    @relation(fields: [createdById], references: [id])
+
+  @@map("stock_movements")
+}
+
+model Challan {
+  id            String        @id @default(uuid())
+  challanNumber String        @unique @map("challan_number")
+  customerId    String        @map("customer_id")
+  totalQuantity Int           @map("total_quantity")
+  status        ChallanStatus @default(DRAFT)
+  createdById   String        @map("created_by_id")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  customer  Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  createdBy User          @relation(fields: [createdById], references: [id])
+  items     ChallanItem[]
+
+  @@map("challans")
+}
+
+model ChallanItem {
+  id                  String   @id @default(uuid())
+  challanId           String   @map("challan_id")
+  productId           String   @map("product_id")
+  productNameSnapshot String   @map("product_name_snapshot")
+  skuSnapshot         String   @map("sku_snapshot")
+  unitPriceSnapshot   Float    @map("unit_price_snapshot")
+  quantity            Int
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  challan Challan @relation(fields: [challanId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@map("challan_items")
+}
