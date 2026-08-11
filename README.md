@@ -1,122 +1,131 @@
 # Fundsroom ERP + CRM Operations Portal
 
-> Mini ERP & CRM Operations Portal for Wholesale and Distribution Enterprises.
-
-[![Frontend Deployment](https://img.shields.io/badge/Vercel-Deployment--Ready-000000?style=for-the-badge&logo=vercel)](https://fundsroom-erp-crm.vercel.app)
-[![Backend Deployment](https://img.shields.io/badge/Render-Deployment--Ready-46E3B7?style=for-the-badge&logo=render)](https://fundsroom-erp-api.onrender.com)
-[![Database](https://img.shields.io/badge/PostgreSQL-Neon%2FSupabase-4169E1?style=for-the-badge&logo=postgresql)](https://neon.tech)
+## 1. Project Title
+**Fundsroom Mini ERP + CRM Operations Portal (`fundsroom-erp-crm`)**
 
 ---
 
-## 1. Project Overview
-**fundsroom-erp-crm** is a full-stack, enterprise-grade Operations Portal designed for wholesale, distribution, and manufacturing businesses. It provides seamless end-to-end management across four core operational areas:
-1. **Authentication & Role-Based Access Control** (ADMIN, SALES, WAREHOUSE, ACCOUNTS).
-2. **Customer Relationship Management (CRM)** for tracking leads, active accounts, contact details, and follow-up activities.
-3. **Product Catalog & Inventory Engine** with real-time stock balances, low-stock threshold alerts, and immutable IN/OUT movement logs.
-4. **Sales Delivery Challan Workflow** featuring draft creation, product price snapshots, and atomic database transaction stock deduction upon confirmation.
+## 2. Project Overview
+**fundsroom-erp-crm** is a full-stack enterprise portal built for wholesale, distribution, and manufacturing businesses. The application integrates Customer Relationship Management (CRM), Product Catalog management, Inventory tracking with audit logs, and a complete Sales Delivery Challan processing flow featuring atomic database stock verification.
 
 ---
 
-## 2. Key Features
-- **Role-Based Workflows**: Custom dashboard access and action permissions tailored to ADMIN, SALES, WAREHOUSE, and ACCOUNTS users.
-- **CRM Follow-Up History**: Track ongoing discussions and schedule future contact dates per customer account.
-- **Product & Rack Management**: Store product codes, categories, unit prices, minimum alert quantities, and warehouse rack locations.
-- **Stock Movement Audit Trail**: Every stock change (IN/OUT) generates a traceable movement record linked to the operating user.
-- **Atomic Sales Challan Confirmation**:
-  - Save challans as `DRAFT` without altering inventory stock.
-  - Confirming a challan verifies inventory availability across all requested line items inside a PostgreSQL `$transaction`.
-  - Rejects with `HTTP 400` error if any product stock is insufficient, preventing partial or negative stock updates.
-  - Captures product snapshots (`productNameSnapshot`, `skuSnapshot`, `unitPriceSnapshot`) to preserve historical pricing integrity.
-- **Responsive Admin Portal UI**: Designed with modern CSS custom properties, stat summary metrics cards, interactive modals, paginated tables, search bars, and live status badges.
+## 3. Business Problem
+Wholesale and distribution businesses face operational friction due to:
+- **Disjointed CRM & Order Processes**: Sales teams create orders without real-time inventory visibility, resulting in unfulfillable commitments.
+- **Negative Stock & Inventory Errors**: Inaccurate stock tracking leads to negative inventory levels and unrecorded dispatches.
+- **Price Instability**: Fluctuating supplier prices overwrite historic order amounts if historical snapshots are not captured.
+- **Lack of Role-Based Audit Trails**: Stock adjustments and order confirmations lack strict authorization, leading to accountability gaps.
+
+This project solves these challenges by providing a single operational platform where sales, warehouse, accounts, and management teams operate under strict role-based controls and atomic database transactions.
 
 ---
 
-## 3. Tech Stack
+## 4. Key Features
+- **Role-Based Access Control (RBAC)**: Enforced via JWT authentication and role authorization middleware across `ADMIN`, `SALES`, `WAREHOUSE`, and `ACCOUNTS`.
+- **Customer CRM & Follow-ups**: Customer account management with status tracking (`LEAD`, `ACTIVE`, `INACTIVE`), customer types (`RETAIL`, `WHOLESALE`, `DISTRIBUTOR`), and follow-up history logging.
+- **Product Catalog & Stock Alerts**: SKU tracking, category management, unit prices, warehouse rack locations, and low-stock alert highlights.
+- **Stock Movement Audit Log**: Immutable record of every stock movement (`IN` / `OUT`) linked to the initiating user and reason.
+- **Atomic Sales Delivery Challan Workflow**:
+  - Save order as `DRAFT` without altering physical inventory stock.
+  - Snapshot pricing (`productNameSnapshot`, `skuSnapshot`, `unitPriceSnapshot`) captured at draft creation.
+  - Confirmation executes an atomic Prisma `$transaction` checking stock availability across all requested items.
+  - Rejects with `HTTP 400 Bad Request` if any item has insufficient stock, preventing partial updates or negative stock.
+  - Automatically decrements stock and logs `OUT` stock movements upon successful confirmation.
+
+---
+
+## 5. Technology Stack
 
 ### Frontend
-- **Framework**: React (TypeScript)
-- **Bundler**: Vite
+- **Framework**: React 18 with TypeScript
+- **Build Tool**: Vite
 - **Routing**: React Router DOM v6
-- **HTTP Client**: Axios with request/response Bearer token interceptors
+- **HTTP Client**: Axios (with Bearer token request interceptor and 401 response interceptor)
 - **Icons**: Lucide React
-- **Styling**: Custom CSS Design System (Variables, Glassmorphism, Grid/Flexbox)
+- **Styling**: Vanilla CSS with custom design tokens, modern responsive flex/grid layouts, badges, and modals
 
 ### Backend
-- **Runtime**: Node.js (TypeScript)
-- **Web Server**: Express.js
-- **Database ORM**: Prisma ORM
-- **Authentication**: JWT (JSON Web Tokens) with `bcryptjs` password hashing
-- **Middleware**: Centralized Error Handler, Request Validation, JWT Authenticator, Role Authorizer
+- **Runtime**: Node.js v24
+- **Framework**: Express.js with TypeScript
+- **ORM**: Prisma ORM v5
+- **Authentication**: JSON Web Tokens (`jsonwebtoken`) & `bcryptjs` password hashing
+- **Validation & Error Handling**: Custom `AppError` architecture with centralized Express error middleware
 
-### Database & Deployment
-- **Database Engine**: PostgreSQL (Neon / Supabase / Render PostgreSQL)
-- **Frontend Host**: Vercel
-- **Backend Host**: Render
+### Database
+- **Primary Database Engine**: PostgreSQL (Neon / Supabase / Render PostgreSQL)
+- **Local Dev Database**: SQLite (`dev.db`) configured via Prisma for zero-config local execution
 
 ---
 
-## 4. Architecture
+## 6. System Architecture
 
-```
-                               ┌─────────────────────────────┐
-                               │  Vercel Frontend (React TS) │
-                               └──────────────┬──────────────┘
-                                              │ HTTP / REST APIs
-                                              ▼
-                               ┌─────────────────────────────┐
-                               │   Render Backend (Express)  │
-                               └──────────────┬──────────────┘
-                                              │ Prisma ORM
-                                              ▼
-                               ┌─────────────────────────────┐
-                               │ PostgreSQL (Neon/Supabase)  │
-                               └─────────────────────────────┘
+```text
+React Frontend (Vite + TypeScript)
+        │
+        ▼  (HTTP / REST APIs with JWT Bearer Header)
+Express Backend Server (Node.js + TypeScript)
+        │
+        ▼  (Request Validation & Role Authorizer Middleware)
+Modules / Controllers / Services (Auth, Customers, Products, Inventory, Challans)
+        │
+        ▼  (Prisma ORM Client & Database Transactions)
+Database (PostgreSQL / SQLite)
 ```
 
 ---
 
-## 5. Folder Structure
+## 7. Project Folder Structure
 
-```
+```text
 fundsroom-erp-crm/
 ├── backend/
 │   ├── src/
-│   │   ├── config/             # Environment & Prisma client instances
-│   │   ├── middleware/         # Auth, Authorize, Validation & Central Error Handlers
+│   │   ├── config/             # Config loader & Prisma singleton
+│   │   ├── middleware/         # Auth, Authorize, & Centralized Error Handlers
 │   │   ├── modules/
-│   │   │   ├── auth/           # Login & session verification
-│   │   │   ├── customers/      # Customer CRM & follow-ups
-│   │   │   ├── products/       # Product catalog
-│   │   │   ├── inventory/      # Stock movement audit logs
-│   │   │   ├── challans/       # Sales challans & atomic transaction logic
-│   │   │   └── dashboard/      # Summary metrics & low-stock alerts
-│   │   ├── utils/              # Response formatters, AppError classes, Challan counter
-│   │   └── server.ts           # Express server entrypoint
+│   │   │   ├── auth/           # Login & session check (/api/auth)
+│   │   │   ├── customers/      # Customer CRM & follow-ups (/api/customers)
+│   │   │   ├── products/       # Product catalog (/api/products)
+│   │   │   ├── inventory/      # Stock movement audit logs (/api/stock-movements)
+│   │   │   ├── challans/       # Sales challans & transaction logic (/api/challans)
+│   │   │   └── dashboard/      # Summary stats & alert counters (/api/dashboard)
+│   │   ├── types/
+│   │   │   └── enums.ts        # Role, Customer, Movement, and Challan Enums
+│   │   ├── utils/              # Standard responses, AppError classes, Challan counter
+│   │   └── server.ts           # Express application server entrypoint
 │   ├── prisma/
-│   │   ├── schema.prisma       # Database models & enums
-│   │   └── seed.ts             # Database seed script
+│   │   ├── schema.prisma       # Database schema definition
+│   │   ├── dev.db              # Local development database
+│   │   └── seed.ts             # Seeder script
 │   ├── .env.example
+│   ├── .env
 │   ├── package.json
 │   └── tsconfig.json
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── components/         # Sidebar, Header, SummaryCard, Pagination, Modal, Badge
+│   │   ├── components/         # Header, Sidebar, SummaryCard, Pagination, Modal, Badge, ProtectedRoute
 │   │   ├── context/            # AuthContext (Token, User & Role verification)
 │   │   ├── layouts/            # DashboardLayout shell
 │   │   ├── pages/
-│   │   │   ├── Login/          # Quick-Login demo portal
-│   │   │   ├── Dashboard/      # Summary stats & alert tables
-│   │   │   ├── Customers/      # CRM list & detail follow-up timeline
-│   │   │   ├── Products/       # Catalog & low-stock filter
-│   │   │   ├── Inventory/      # Stock movement log & manual adjustment
-│   │   │   └── Challans/       # List, Create draft, & Confirm stock flow
-│   │   ├── services/           # Axios API modules
-│   │   ├── routes/             # Protected app routes
-│   │   └── App.tsx
+│   │   │   ├── Login/          # LoginPage with demo quick-login buttons
+│   │   │   ├── Dashboard/      # Executive metrics & low stock table
+│   │   │   ├── Customers/      # Customer list & detail follow-up history
+│   │   │   ├── Products/       # Product list & low-stock filter
+│   │   │   ├── Inventory/      # Stock movement history log & manual adjustment
+│   │   │   └── Challans/       # Challan list, Create draft, & Confirm stock view
+│   │   ├── services/           # Axios API services (api, customer, product, inventory, challan, dashboard)
+│   │   ├── routes/             # AppRoutes (Protected React Router routes)
+│   │   ├── index.css           # Styling system & CSS variables
+│   │   ├── App.tsx
+│   │   └── main.tsx
 │   ├── .env.example
+│   ├── .env
 │   ├── index.html
-│   └── package.json
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── vite.config.ts
 │
 ├── postman/
 │   └── fundsroom-erp.postman_collection.json
@@ -126,196 +135,220 @@ fundsroom-erp-crm/
 
 ---
 
-## 6. Database Design
-
-```
-   ┌───────────┐         1:N         ┌───────────────┐
-   │   User    ├────────────────────►│   FollowUp    │
-   └─────┬─────┘                     └───────▲───────┘
-         │                                   │
-         │ 1:N                               │ 1:N
-         ▼                                   │
-   ┌───────────┐ 1:N                 ┌───────┴───────┐
-   │  Challan  ├────────────────────►│   Customer    │
-   └─────┬─────┘                     └───────────────┘
-         │
-         │ 1:N
-         ▼
-   ┌───────────┐         N:1         ┌───────────────┐
-   │ChallanItem├────────────────────►│    Product    │
-   └───────────┘                     └───────▲───────┘
-                                             │ 1:N
-                                     ┌───────┴───────┐
-                                     │ StockMovement │
-                                     └───────────────┘
-```
-
-### Models Overview
-- **User**: Stores email, hashed password, name, and `Role` (`ADMIN`, `SALES`, `WAREHOUSE`, `ACCOUNTS`).
-- **Customer**: Customer profile, mobile, email, business name, GST number, `CustomerType` (`RETAIL`, `WHOLESALE`, `DISTRIBUTOR`), `CustomerStatus` (`LEAD`, `ACTIVE`, `INACTIVE`), address, and scheduled follow-up date.
-- **FollowUp**: Logged notes, follow-up date, linked to Customer and creator User.
-- **Product**: SKU code (unique), name, category, unit price, current stock, min stock alert threshold, warehouse location.
-- **StockMovement**: Quantity change, `MovementType` (`IN`, `OUT`), reason, created by User, linked to Product.
-- **Challan**: Auto-generated `challanNumber` (`CH-2026-XXXXXX`), customer relation, status (`DRAFT`, `CONFIRMED`, `CANCELLED`), total quantity, creator User.
-- **ChallanItem**: Item row preserving **snapshot data**: `productNameSnapshot`, `skuSnapshot`, `unitPriceSnapshot`, quantity, linked to Challan and Product.
+## 8. Authentication and Role-Based Access
+- **Authentication**: JWT-based authentication. Users log in via `POST /api/auth/login` to receive a signed JWT token containing user ID, email, name, and role.
+- **Token Security**: Tokens are passed via `Authorization: Bearer <token>` headers. Passwords are hashed using `bcryptjs` (10 salt rounds) and excluded from API responses.
+- **Role Authorization**: Express middleware (`authorize.middleware.ts`) verifies user roles against allowed roles per route.
+- **Frontend Route Protection**: `ProtectedRoute.tsx` guards routes, automatically redirecting unauthenticated users to `/login` and rendering HTTP 403 pages for unauthorized role access.
 
 ---
 
-## 7. API Documentation
+## 9. User Roles and Permissions
 
-### Response Standards
+| User Role | Dashboard | Customers CRM | Product Catalog | Stock Movements | Sales Challans |
+|---|:---:|:---:|:---:|:---:|:---:|
+| **ADMIN** | Full Access | Full Access | Full Access | Full Access | Full Access |
+| **SALES** | Full Access | View, Create, Edit, Follow-up | View Only | View Only | Create Draft, Confirm, Cancel, View |
+| **WAREHOUSE** | Full Access | View Only | Create, Edit, View | Add Stock IN/OUT, View Logs | View Only |
+| **ACCOUNTS** | Full Access | View Only | View Only | View Only | View Only |
 
-#### Success Response
-```json
-{
-  "success": true,
-  "message": "Operation completed successfully",
-  "data": {}
-}
+---
+
+## 10. Customer CRM Module
+- **Fields**: Customer Name, Mobile Number, Email, Business Name, GST Number (optional), Customer Type (`RETAIL`, `WHOLESALE`, `DISTRIBUTOR`), Address, Status (`LEAD`, `ACTIVE`, `INACTIVE`), Follow-up Date, Notes.
+- **Features**: Search bar, status and type dropdown filters, paginated table, customer creation/edit modals, customer detail page with a chronological follow-up activity log and linked sales challans.
+
+---
+
+## 11. Product and Inventory Module
+- **Fields**: Product Name, SKU / Item Code (unique), Category, Unit Price (INR), Current Stock, Minimum Stock Alert Threshold, Warehouse Rack Location.
+- **Features**: Product search, category filtering, low-stock alert filter toggle, product creation (records initial stock movement if stock > 0), product editing (stock updates are enforced through stock movements to maintain audit integrity).
+
+---
+
+## 12. Stock Movement System
+- **Tracking**: Logs Product ID, Quantity Changed, Movement Type (`IN` or `OUT`), Reason / Reference Note, Creator User ID, Timestamp.
+- **Validation**: Manual stock dispatches (`OUT`) validate that `currentStock >= requestedQuantity`. Requests exceeding available stock are rejected with `HTTP 400 Bad Request`.
+
+---
+
+## 13. Sales Challan Module
+- **Fields**: Challan Number (`CH-2026-XXXXXX`), Customer ID, Total Quantity, Status (`DRAFT`, `CONFIRMED`, `CANCELLED`), Created By User ID, Created At, Updated At.
+- **Snapshot Line Items**: Each item stores `productId`, `productNameSnapshot`, `skuSnapshot`, `unitPriceSnapshot`, `quantity`. Price snapshots ensure historical invoice accuracy regardless of future product catalog edits.
+
+---
+
+## 14. Challan Stock Business Logic
+
+### Draft State (`status: DRAFT`)
+1. User selects customer and adds line items with quantities.
+2. System generates sequential challan number (e.g. `CH-2026-000001`).
+3. Product snapshot data is saved.
+4. **Physical stock is NOT reduced during Draft state.**
+
+### Confirmed State (`status: CONFIRMED`)
+1. User requests confirmation via `POST /api/challans/:id/confirm`.
+2. Backend opens an atomic Prisma `$transaction`.
+3. System verifies status is currently `DRAFT`.
+4. For every line item, the system checks `product.currentStock >= item.quantity`.
+5. **Insufficient Stock Rejection**: If ANY product lacks sufficient stock, the entire transaction is aborted and returns:
+   ```json
+   {
+     "success": false,
+     "message": "Insufficient stock for Industrial Valve 2-inch"
+   }
+   ```
+   No partial stock updates occur, and no stock movements are recorded.
+6. **Successful Confirmation**: If stock is sufficient for all items:
+   - Stock is decremented for all line items (`currentStock - quantity`).
+   - `OUT` `StockMovement` records are created with reason `Sales Challan Confirmation: CH-2026-XXXXXX`.
+   - Challan status is updated to `CONFIRMED`.
+
+---
+
+## 15. Database Design
+
+### Prisma Schema Models Overview
+
+```text
+User 1 ───< FollowUp N >─── 1 Customer
+ User 1 ───< StockMovement N >─── 1 Product
+ User 1 ───< Challan N >─── 1 Customer
+             Challan 1 ───< ChallanItem N >─── 1 Product
 ```
 
-#### Error Response
-```json
-{
-  "success": false,
-  "message": "Insufficient stock for Industrial Valve 2-inch",
-  "errors": []
-}
-```
+1. **User**: `id` (PK), `email` (Unique), `password`, `name`, `role`, `createdAt`, `updatedAt`.
+2. **Customer**: `id` (PK), `name`, `mobile`, `email`, `businessName`, `gstNumber`, `customerType`, `address`, `status`, `followUpDate`, `notes`, `createdAt`, `updatedAt`.
+3. **FollowUp**: `id` (PK), `customerId` (FK -> Customer), `notes`, `followUpDate`, `createdById` (FK -> User), `createdAt`.
+4. **Product**: `id` (PK), `name`, `sku` (Unique), `category`, `unitPrice`, `currentStock`, `minStockAlert`, `warehouseLocation`, `createdAt`, `updatedAt`.
+5. **StockMovement**: `id` (PK), `productId` (FK -> Product), `quantity`, `movementType`, `reason`, `createdById` (FK -> User), `createdAt`.
+6. **Challan**: `id` (PK), `challanNumber` (Unique), `customerId` (FK -> Customer), `totalQuantity`, `status`, `createdById` (FK -> User), `createdAt`, `updatedAt`.
+7. **ChallanItem**: `id` (PK), `challanId` (FK -> Challan), `productId` (FK -> Product), `productNameSnapshot`, `skuSnapshot`, `unitPriceSnapshot`, `quantity`, `createdAt`.
 
-### Core API Endpoints
+---
 
-| Module | Method | Endpoint | Description | Allowed Roles |
+## 16. API Documentation
+
+| Method | Endpoint | Purpose | Authentication | Allowed Roles |
 |---|---|---|---|---|
-| **Auth** | `POST` | `/api/auth/login` | Authenticate email/password, return JWT | Public |
-| **Auth** | `GET` | `/api/auth/me` | Fetch active user session details | Authenticated |
-| **Customers** | `GET` | `/api/customers` | List customers (paginated, search, filter) | All Roles |
-| **Customers** | `GET` | `/api/customers/:id` | Get customer by ID + follow-up history | All Roles |
-| **Customers** | `POST` | `/api/customers` | Create new customer record | ADMIN, SALES |
-| **Customers** | `PUT` | `/api/customers/:id` | Update customer record | ADMIN, SALES |
-| **Customers** | `DELETE` | `/api/customers/:id` | Delete customer account | ADMIN, SALES |
-| **Customers** | `POST` | `/api/customers/:id/followups` | Add follow-up note to customer | ADMIN, SALES |
-| **Products** | `GET` | `/api/products` | List product catalog (search, low stock filter) | All Roles |
-| **Products** | `GET` | `/api/products/:id` | Get product details + stock movements | All Roles |
-| **Products** | `POST` | `/api/products` | Create product record | ADMIN, WAREHOUSE |
-| **Products** | `PUT` | `/api/products/:id` | Update product information | ADMIN, WAREHOUSE |
-| **Inventory** | `GET` | `/api/stock-movements` | List stock movement audit logs | All Roles |
-| **Inventory** | `POST` | `/api/stock-movements` | Add manual stock movement (IN / OUT) | ADMIN, WAREHOUSE |
-| **Challans** | `GET` | `/api/challans` | List sales delivery challans | All Roles |
-| **Challans** | `GET` | `/api/challans/:id` | Get challan details + item snapshots | All Roles |
-| **Challans** | `POST` | `/api/challans` | Create Draft sales challan | ADMIN, SALES |
-| **Challans** | `POST` | `/api/challans/:id/confirm` | Confirm challan & deduct stock atomically | ADMIN, SALES |
-| **Challans** | `POST` | `/api/challans/:id/cancel` | Cancel draft sales challan | ADMIN, SALES |
-| **Dashboard** | `GET` | `/api/dashboard/stats` | Fetch executive summary metrics & alerts | All Roles |
+| `POST` | `/api/auth/login` | Authenticate user & return JWT token | Public | All |
+| `GET` | `/api/auth/me` | Fetch active user profile | Bearer JWT | All |
+| `GET` | `/api/health` | Service health check | Public | All |
+| `GET` | `/api/dashboard/stats` | Summary statistics & alerts | Bearer JWT | All |
+| `GET` | `/api/customers` | List customers (paginated, search, filter) | Bearer JWT | All |
+| `GET` | `/api/customers/:id` | Get customer by ID & follow-ups | Bearer JWT | All |
+| `POST` | `/api/customers` | Create new customer account | Bearer JWT | ADMIN, SALES |
+| `PUT` | `/api/customers/:id` | Update customer details | Bearer JWT | ADMIN, SALES |
+| `DELETE` | `/api/customers/:id` | Delete customer account | Bearer JWT | ADMIN, SALES |
+| `POST` | `/api/customers/:id/followups` | Log CRM follow-up note | Bearer JWT | ADMIN, SALES |
+| `GET` | `/api/products` | List product catalog (search, low stock filter) | Bearer JWT | All |
+| `GET` | `/api/products/:id` | Get product details & stock movements | Bearer JWT | All |
+| `POST` | `/api/products` | Create product record | Bearer JWT | ADMIN, WAREHOUSE |
+| `PUT` | `/api/products/:id` | Update product details | Bearer JWT | ADMIN, WAREHOUSE |
+| `GET` | `/api/stock-movements` | List stock movement audit logs | Bearer JWT | All |
+| `POST` | `/api/stock-movements` | Add manual stock movement (IN/OUT) | Bearer JWT | ADMIN, WAREHOUSE |
+| `GET` | `/api/challans` | List sales delivery challans | Bearer JWT | All |
+| `GET` | `/api/challans/:id` | Get challan details & snapshot items | Bearer JWT | All |
+| `POST` | `/api/challans` | Create Draft sales challan | Bearer JWT | ADMIN, SALES |
+| `POST` | `/api/challans/:id/confirm` | Confirm challan & deduct stock atomically | Bearer JWT | ADMIN, SALES |
+| `POST` | `/api/challans/:id/cancel` | Cancel draft sales challan | Bearer JWT | ADMIN, SALES |
 
 ---
 
-## 8. Authentication & Security
-- **Passwords**: Hashed using `bcryptjs` with salt rounds = 10. Passwords are never returned in API payloads.
-- **JWT Authentication**: Secured with secret key `JWT_SECRET`, transmitted via `Authorization: Bearer <token>`.
-- **Validation**: Strict validation of emails, enums, required fields, and non-negative numbers.
-
----
-
-## 9. Role Permissions Matrix
-
-| Permission / Action | ADMIN | SALES | WAREHOUSE | ACCOUNTS |
-|---|:---:|:---:|:---:|:---:|
-| View Dashboard & Metrics | ✅ | ✅ | ✅ | ✅ |
-| View Customer Details | ✅ | ✅ | ✅ | ✅ |
-| Create / Edit Customers | ✅ | ✅ | ❌ | ❌ |
-| Log CRM Follow-up Notes | ✅ | ✅ | ❌ | ❌ |
-| View Products & Stock | ✅ | ✅ | ✅ | ✅ |
-| Create / Edit Products | ✅ | ❌ | ✅ | ❌ |
-| View Inventory Log History | ✅ | ✅ | ✅ | ✅ |
-| Record Stock IN/OUT Movements | ✅ | ❌ | ✅ | ❌ |
-| View Sales Challans | ✅ | ✅ | ✅ | ✅ |
-| Create Draft Sales Challan | ✅ | ✅ | ❌ | ❌ |
-| Confirm Sales Challan (Deduct Stock) | ✅ | ✅ | ❌ | ❌ |
-
----
-
-## 10. Environment Variables
-
-### Backend (`backend/.env`)
-```env
-PORT=5000
-DATABASE_URL="postgresql://username:password@ep-host.region.aws.neon.tech/fundsroom_erp?sslmode=require"
-JWT_SECRET="fundsroom_super_secret_jwt_key_2026_change_in_production"
-JWT_EXPIRES_IN="1d"
-FRONTEND_URL="http://localhost:5173"
-```
-
-### Frontend (`frontend/.env`)
-```env
-VITE_API_BASE_URL=http://localhost:5000/api
+## 17. API Authentication
+Include the JWT token in HTTP request headers:
+```text
+Authorization: Bearer <your_jwt_token_here>
 ```
 
 ---
 
-## 11. Local Setup Instructions
+## 18. Environment Variables
+
+### Backend Environment Variables (`backend/.env`)
+- `PORT`: Port number for Express server (default: `5000`)
+- `DATABASE_URL`: Connection URL for database (`file:./dev.db` for local SQLite, or PostgreSQL URL for production)
+- `JWT_SECRET`: Secret key used to sign and verify JWT tokens
+- `JWT_EXPIRES_IN`: Token validity period (e.g. `1d`)
+- `FRONTEND_URL`: Client URL for CORS configuration (e.g. `http://localhost:5173`)
+
+### Frontend Environment Variables (`frontend/.env`)
+- `VITE_API_BASE_URL`: Base API endpoint URL (e.g. `http://localhost:5000/api`)
+
+---
+
+## 19. Local Development Setup
 
 ### Prerequisites
-- Node.js (v18+)
+- Node.js v18 or v20 or v24
 - npm or pnpm
-- Access to a PostgreSQL database (e.g., free tier on Neon.tech or local PostgreSQL server)
+
+### Clone Repository
+```bash
+git clone https://github.com/Lalith9701/fundsroom-erp-crm.git
+cd fundsroom-erp-crm
+```
 
 ---
 
-## 12. Database Setup & Migrations
+## 20. Database Setup
+The repository contains a pre-configured local database setup (`backend/prisma/dev.db`) for immediate execution.
 
-1. Navigate to backend directory:
+To recreate or sync the database:
 ```bash
 cd backend
-```
-
-2. Copy `.env.example` to `.env` and set your `DATABASE_URL`:
-```bash
-cp .env.example .env
-```
-
-3. Generate Prisma Client:
-```bash
-npx prisma generate
-```
-
-4. Push schema to PostgreSQL database:
-```bash
 npx prisma db push
 ```
 
-5. Seed database with initial users, products, customers, and stock:
+---
+
+## 21. Prisma Migration and Seed Instructions
+Run the seed script to populate test users, products, customers, stock movements, and sample challans:
+
 ```bash
+cd backend
+npx prisma generate
+npx prisma db push
 npm run seed
 ```
 
 ---
 
-## 13. How to Run Backend
+## 22. How to Run Backend
 
 ```bash
 cd backend
 npm run dev
 ```
-Backend API server starts at `http://localhost:5000`.
+Backend API starts at: `http://localhost:5000`
 
 ---
 
-## 14. How to Run Frontend
+## 23. How to Run Frontend
+
+Open a second terminal window:
 
 ```bash
 cd frontend
 npm run dev
 ```
-Frontend React app starts at `http://localhost:5173`.
+Frontend React App starts at: `http://localhost:5173`
 
 ---
 
-## 15. Test Credentials
+## 24. Postman Collection
+A Postman collection JSON is included in the project:
+- Path: `postman/fundsroom-erp.postman_collection.json`
+- Variables: Includes `baseUrl` (`http://localhost:5000/api`) and `token`.
+- Automated Script: Logging in via **Auth -> Login (Admin)** populates the `token` variable automatically.
 
-All seed accounts use the password: **`Password123!`**
+---
 
-| Role | Email | Hashed Password in Seed |
+## 25. Test Credentials
+
+All seed demo accounts use the password: **`Password123!`**
+
+| Role | Email | Password |
 |---|---|---|
 | **ADMIN** | `admin@example.com` | `Password123!` |
 | **SALES** | `sales@example.com` | `Password123!` |
@@ -324,55 +357,68 @@ All seed accounts use the password: **`Password123!`**
 
 ---
 
-## 16. Postman Collection Usage
+## 26. Deployment Instructions
 
-1. Open Postman.
-2. Import file from `postman/fundsroom-erp.postman_collection.json`.
-3. Execute **Auth -> Login (Admin)**. The test script automatically populates the `token` variable.
-4. Execute any customer, product, inventory, or challan API requests.
-
----
-
-## 17. Deployment Instructions
-
-### Frontend Deployment (Vercel)
+### Frontend (Vercel)
 1. Import repository on [Vercel](https://vercel.com).
 2. Set Root Directory to `frontend`.
-3. Framework Preset: `Vite`.
-4. Environment Variable:
-   - `VITE_API_BASE_URL`: `https://fundsroom-erp-api.onrender.com/api`
-5. Deploy!
+3. Set Framework Preset to `Vite`.
+4. Set Environment Variable `VITE_API_BASE_URL` to your production backend API URL.
 
-### Backend Deployment (Render)
-1. Create a **Web Service** on [Render](https://render.com).
+### Backend (Render)
+1. Create a Web Service on [Render](https://render.com).
 2. Set Root Directory to `backend`.
-3. Build Command: `npm install && npm run prisma:generate && npm run build`
+3. Build Command: `npm install && npx prisma generate && npm run build`
 4. Start Command: `npm run start`
-5. Environment Variables:
-   - `DATABASE_URL`: Connection string from Neon PostgreSQL.
-   - `JWT_SECRET`: Secure random string.
-   - `JWT_EXPIRES_IN`: `1d`
-   - `PORT`: `10000` (Render default)
+5. Configure Environment Variables: `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `PORT`.
 
-### Database Deployment (Neon / Supabase)
+### Database (Neon / Supabase)
 1. Create a project on [Neon](https://neon.tech) or [Supabase](https://supabase.com).
-2. Copy the pooled PostgreSQL connection string into `DATABASE_URL`.
+2. Copy the PostgreSQL connection string to `DATABASE_URL` in backend configuration.
+3. Update `backend/prisma/schema.prisma` datasource provider to `postgresql`.
 
 ---
 
-## 18. Live Deployment Placeholders
-- **Frontend Application URL**: `https://fundsroom-erp-crm.vercel.app`
-- **Backend API Base URL**: `https://fundsroom-erp-api.onrender.com/api`
+## 27. Frontend URL
+`http://localhost:5173` (Local environment; ready for deployment)
+
+## 28. Backend API URL
+`http://localhost:5000/api` (Local environment; ready for deployment)
+
+## 29. API Health Check URL
+`http://localhost:5000/api/health` (Local environment)
 
 ---
 
-## 19. Assumptions
-- Stock movements logged during Challan Confirmation use movement reason `Sales Challan Confirmation: CH-2026-XXXXXX`.
-- Product snapshots on Challan items freeze historical prices, preventing future product price edits from altering old invoice values.
-- Deleting a customer with existing sales challans is blocked by referential integrity; setting customer status to `INACTIVE` is recommended.
+## 30. Assumptions
+- Challan confirmations use reason code `Sales Challan Confirmation: CH-2026-XXXXXX`.
+- Product snapshots on Challan items freeze price data at draft creation time.
+- Deleting a customer linked to existing sales challans is restricted to preserve database referential integrity.
 
 ---
 
-## 20. Known Limitations
-- Multi-currency support is not included; prices are standard INR (₹).
-- PDF invoice generation and S3 file attachments can be added in future enhancement iterations.
+## 31. Known Limitations
+- Standard currency is INR (₹); multi-currency conversion is not included.
+- PDF invoice generation and S3 file upload integrations can be added as future enhancements.
+
+---
+
+## 32. Testing / Verification
+
+The following verification tests were performed and confirmed working:
+
+- [x] **API Health Check**: Verified `GET /api/health` returns `{"success": true, "message": "Fundsroom ERP + CRM API is online and operational"}`.
+- [x] **Authentication**: Verified JWT login for all 4 seed users (`admin@example.com`, `sales@example.com`, `warehouse@example.com`, `accounts@example.com`).
+- [x] **Role Access Control**: Verified WAREHOUSE user receives `HTTP 403 Forbidden` when attempting to create sales challans; verified SALES user receives `HTTP 403 Forbidden` when attempting to create products.
+- [x] **Customer CRM**: Tested creating customer, editing customer details, and logging follow-up notes.
+- [x] **Product & Inventory**: Tested product creation, editing, and stock IN/OUT manual movement entries.
+- [x] **Draft Challan Creation**: Verified creating a challan saves status as `DRAFT`, captures product snapshot pricing, and leaves product stock levels untouched.
+- [x] **Confirmed Challan Stock Deduction**: Verified confirming a draft challan decrements product stock and logs `OUT` stock movement records.
+- [x] **Insufficient Stock Validation**: Verified requesting a challan confirmation with quantity exceeding product stock returns `HTTP 400 Bad Request` with message `Insufficient stock for <Product Name>`, leaving inventory levels unmodified.
+
+---
+
+## 33. Future Improvements
+- Automated PDF invoice export for confirmed sales challans.
+- Multi-warehouse location inventory transfers.
+- Email notifications for low-stock threshold triggers.
