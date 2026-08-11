@@ -1,6 +1,6 @@
 import { prisma } from '../../config/prisma';
 import { BadRequestError, NotFoundError } from '../../utils/errors';
-import { MovementType } from '@prisma/client';
+import { MovementType } from '../../types/enums';
 
 export interface StockMovementQueryOptions {
   page?: number;

@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config';
 import { UnauthorizedError } from '../utils/errors';
-import { Role } from '@prisma/client';
+import { Role } from '../types/enums';
 
 export interface AuthUser {
   id: string;

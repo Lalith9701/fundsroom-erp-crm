@@ -1,6 +1,6 @@
 import { prisma } from '../../config/prisma';
 import { BadRequestError, NotFoundError } from '../../utils/errors';
-import { CustomerStatus, CustomerType } from '@prisma/client';
+import { CustomerStatus, CustomerType } from '../../types/enums';
 
 export interface CustomerQueryOptions {
   page?: number;

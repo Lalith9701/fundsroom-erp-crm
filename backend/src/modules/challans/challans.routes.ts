@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { ChallansController } from './challans.controller';
 import { authenticate } from '../../middleware/auth.middleware';
 import { authorize } from '../../middleware/authorize.middleware';
-import { Role } from '@prisma/client';
+import { Role } from '../../types/enums';
 
 const router = Router();
 

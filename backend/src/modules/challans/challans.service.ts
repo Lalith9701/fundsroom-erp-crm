@@ -1,6 +1,6 @@
 import { prisma } from '../../config/prisma';
 import { BadRequestError, NotFoundError } from '../../utils/errors';
-import { ChallanStatus, MovementType } from '@prisma/client';
+import { ChallanStatus, MovementType } from '../../types/enums';
 import { generateChallanNumber } from '../../utils/challanNumber';
 
 export interface ChallanQueryOptions {

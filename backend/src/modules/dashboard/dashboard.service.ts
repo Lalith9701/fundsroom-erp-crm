@@ -1,5 +1,5 @@
 import { prisma } from '../../config/prisma';
-import { ChallanStatus } from '@prisma/client';
+import { ChallanStatus } from '../../types/enums';
 
 export class DashboardService {
   static async getStats() {

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { Role } from '@prisma/client';
+import { Role } from '../types/enums';
 import { ForbiddenError, UnauthorizedError } from '../utils/errors';
 
 export const authorize = (allowedRoles: Role[]) => {
